@@ -1,7 +1,6 @@
 const bgg = require('./bgg');
 require('dotenv').config();
 const plus = "➕";
-const decode = require('unescape');
 
 const 
     info = require('./handlers/info'),
@@ -25,7 +24,7 @@ client.on('message', message => {
   const gameSearch = /\[\[(.*?)\]\]/;
   let res = gameSearch.exec(message.content);
   if (!res) return;
-  game(callingChannel, {command: res[1]}, client);
+  game.handle(callingChannel, {command: res[1]}, client);
 
 
   // console.log(message.content.startsWith(prefix));
@@ -53,7 +52,7 @@ client.on('messageReactionAdd', (messageReaction, user) => {
     messageReaction.message.edit({
       embed: { description: "Recupero informazioni in corso ..." }
     }).then(() => {
-      return retrieveGame(itemID);
+      return game.get(itemID);
     }).then(res => {
       return messageReaction.message.edit(res[0]);
     }).then(msg => {
@@ -78,47 +77,4 @@ function getAction(content) {
 
 function getCommand(action,content) {
   return content.substring(action.length, content.length).trim();
-}
-
-function retrieveGame(gameId) {
-  console.log("retrieve game id " + gameId);
-  return bgg('thing',{id:gameId, stats:1, type: "boardgame"}).then(res => {
-    console.log(res);
-    let items = Array.isArray(res.items.item) ? res.items.item : [res.items.item];
-    return items
-      .sort((a,b) => b.statistics.ratings.average.value - a.statistics.ratings.average.value)
-      .map(i => formatFullGame(i));
-  }, err => console.error);
-}
-
-function formatFullGame(item) {
-  item.name = Array.isArray(item.name) ? item.name.find(i => i.type === 'primary') : item.name;
-  let decoded = asciiToText(item.description);
-  decoded = asciiToText(decoded);
-  decoded = decode(decoded, "all");
-  let description = (decoded.length > 1024) ? decoded.substr(0, 1018) + '[...]' : decoded;
-  return {embed: {
-    color:344703,
-    url:`https://boardgamegeek.com/boardgame/${item.id}`,
-    title:item.name.value,
-    thumbnail:{
-      url: `${item.thumbnail}`
-    },
-    fields:[
-      {
-        name:"BGG Average",
-        value:""+item.statistics.ratings.average.value
-      }, {
-        name:"Weight",
-        value: ""+item.statistics.ratings.averageweight.value
-      }, {
-        name:"Description",
-        value: `${description}`
-      }
-    ]
-  }};
-}
-
-function asciiToText(string) {
-  return string.replace(/&amp;#(\d+);/g, function (m, n) { return String.fromCharCode(n); });
 }
